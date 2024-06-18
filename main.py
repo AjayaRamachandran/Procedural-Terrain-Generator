@@ -7,6 +7,8 @@ from PIL import ImageFilter
 from PIL import ImageEnhance
 from PIL import Image
 import copy
+import os
+import json
 
 ###### INITIALIZE ######
 schem = mcschematic.MCSchematic()
@@ -164,7 +166,7 @@ def generateIslandShape(length, width):
                 ironPatchCoords.append(newCoord)
         # Lapis Ore
         lapisPatchCoords = []
-        for lapisPatch in range(random.randint(1300, 1500)):
+        for lapisPatch in range(random.randint(600, 750)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in lapisPatchCoords:
@@ -174,7 +176,7 @@ def generateIslandShape(length, width):
                 lapisPatchCoords.append(newCoord)
         # Diamond Ore
         diamondPatchCoords = []
-        for diamondPatch in range(random.randint(150, 200)):
+        for diamondPatch in range(random.randint(250, 300)):
             newCoord = [random.randint(1, length), random.randint(-40, -20), random.randint(1, width)]
             failed = False
             for coord in diamondPatchCoords:
@@ -284,7 +286,7 @@ def generateIslandShape(length, width):
                 for y in range(lapisPatch[1] - size, lapisPatch[1] + size):
                     for z in range(lapisPatch[2] - size, lapisPatch[2] + size):
                         if dist3D([x, y, z], lapisPatch) < random.randint(1, size) and (schem.getBlockDataAt((x, y, z)) == "stone" or schem.getBlockDataAt((x, y, z)) == "andesite" or schem.getBlockDataAt((x, y, z)) == "diorite" or schem.getBlockDataAt((x, y, z)) == "granite"):
-                            schem.setBlock((x, y, z), "lapis_lazuli_ore")
+                            schem.setBlock((x, y, z), "lapis_ore")
         for diamondPatch in diamondPatchCoords:
             size = 2
             for x in range(diamondPatch[0] - size, diamondPatch[0] + size):
@@ -344,6 +346,26 @@ def generateIslandShape(length, width):
                     schem.setBlock((x, -depth, z), blockData="air")
     
     voxelShader()
-    schem.save("C:\Code\PVP Island Maker", "pvpisland", mcschematic.Version.JE_1_20_1)
+    schem.save(os.path.abspath(os.getcwd()), "pvpisland", mcschematic.Version.JE_1_20_1)
 
 generateIslandShape(180, 180)
+print("Converting schematic into json file...")
+schemData = []
+
+for x in range(0, 180):
+    for z in range(0, 180):
+        for y in range(-40, 50):
+            blockData = schem.getBlockDataAt((x, y, z))
+            if blockData != "minecraft:air" and blockData != "air":
+                block = {}
+                if not "minecraft:" in blockData:
+                    block["_data"] = "minecraft:" + str(blockData)
+                else:
+                    block["_data"] = str(blockData)
+                block["_x"] = str(x)
+                block["_y"] = str(y)
+                block["_z"] = str(z)
+
+                schemData.append(block)
+
+output = json.dump(schemData, open("output.json", "w"))
