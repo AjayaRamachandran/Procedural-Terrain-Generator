@@ -52,7 +52,7 @@ def generateMountainMap(width, length):
     background.save("mountains4.png")
     background = Image.blend(Image.open("mountains4.png"), Image.open("mountains5.png"), 0.6)
     background.save("mountains5.png")
-    pix = np.array(background.getdata()).reshape(background.size[0], background.size[1], 4)
+    pix = np.array(background.getdata()).reshape(background.size[1], background.size[0], 4)
     return pix
 
 def generateCrackMap(width, length):
@@ -87,7 +87,35 @@ def generateCrackMap(width, length):
             gen.putpixel([y,x], (pixel, pixel, pixel))
     gen.save("map.png")
     return image
-        
+
+def generateBiomeMap(width, length):
+    colors = [
+        ["snow" , [245, 245, 255, 255]],
+        ["plains" , [90, 170, 60, 255]],
+        ["desert" , [220, 220, 160, 255]],
+        ["shrooms" , [125, 105, 135, 255]]
+    ]
+    pix = generateMountainMap(width, length)
+    gen = Image.new("RGBA", (width, length))
+    biomeMap = []
+    for y, row in enumerate(pix):
+        rowBiomes = []
+        for x, pixel in enumerate(row):
+            if 180 <= list(pixel)[0] < 256:
+                gen.putpixel([x, y], tuple(colors[3][1]))
+                rowBiomes.append(colors[3][0])
+            elif 145 <= list(pixel)[0] < 180:
+                gen.putpixel([x, y], tuple(colors[2][1]))
+                rowBiomes.append(colors[2][0])
+            elif 90 <= list(pixel)[0] < 145:
+                gen.putpixel([x, y], tuple(colors[1][1]))
+                rowBiomes.append(colors[1][0])
+            elif list(pixel)[0] < 90:
+                gen.putpixel([x, y], tuple(colors[0][1]))
+                rowBiomes.append(colors[0][0])
+        biomeMap.append(rowBiomes)
+    gen.save("biomes.png")
+    return biomeMap
 
 def generateIslandShape(length, width):
     def voxelShader():
@@ -103,6 +131,16 @@ def generateIslandShape(length, width):
                     failed = True
             if failed == False:
                 treeCoords.append(newCoord)
+        ### SHROOMS ###
+        shroomCoords = []
+        for shroom in range(random.randint(150, 200)):
+            newCoord = [random.randint(1, length), random.randint(1, width)]
+            failed = False
+            for coord in shroomCoords:
+                if dist(newCoord, coord) < 10:
+                    failed = True
+            if failed == False:
+                shroomCoords.append(newCoord)
         ### ORES ###
         # Andesite
         andesitePatchCoords = []
@@ -186,57 +224,133 @@ def generateIslandShape(length, width):
                 diamondPatchCoords.append(newCoord)
 
         print("Running probability-based voxel shader...")
+
+        biomeMap = generateBiomeMap(length, width)
         ys = []
-        for x in range(length):
-            for z in range(width):
+        for z in range(width):
+            for x in range(length):
                 y = 150
-                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves"):
+                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves" or "brown_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "red_mushroom_block" in schem.getBlockDataAt((x, y, z))):
                     y -= 1
                 if schem.getBlockDataAt((x, y, z)) == "blue_wool":
                     ys.append(y)
-                    ### GRASS BLOCK ###
-                    schem.setBlock((x, y, z), "grass_block")
-                    ### DIRT ###
-                    for yDisplacement in range(3):
-                        if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
-                            schem.setBlock((x, y - yDisplacement, z), "dirt")
-                    if random.randint(1,2) == 1 and schem.getBlockDataAt((x, y - 3, z)) == "blue_wool":
-                        schem.setBlock((x, y - 3, z), "dirt")
+                    ### SURFACE (GRASS, SAND, SNOW) ###
+                    if biomeMap[z][x] == "plains":
+                        schem.setBlock((x, y, z), "grass_block")
+                    elif biomeMap[z][x] == "desert":
+                        schem.setBlock((x, y, z), "sand")
+                    elif biomeMap[z][x] == "snow":
+                        schem.setBlock((x, y, z), "snow_block")
+                    elif biomeMap[z][x] == "shrooms":
+                        schem.setBlock((x, y, z), "mycelium")
+                    ### SUBSURFACE (DIRT, SANDSTONE) ###
+                    if biomeMap[z][x] == "plains" or biomeMap[z][x] == "shrooms":
+                        for yDisplacement in range(3):
+                            if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
+                                schem.setBlock((x, y - yDisplacement, z), "dirt")
+                        if random.randint(1,2) == 1 and schem.getBlockDataAt((x, y - 3, z)) == "blue_wool":
+                            schem.setBlock((x, y - 3, z), "dirt")
+                    elif biomeMap[z][x] == "desert":
+                        for yDisplacement in range(1):
+                            if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
+                                schem.setBlock((x, y - yDisplacement, z), "sand")
+                        schem.setBlock((x, y - 2, z), "sandstone")
+                        for yDisplacement in range(1, 5):
+                            if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
+                                schem.setBlock((x, y - yDisplacement, z), "sandstone")
+                        if random.randint(1,2) == 1 and schem.getBlockDataAt((x, y - 5, z)) == "blue_wool":
+                            schem.setBlock((x, y - 5, z), "sandstone")
+                    elif biomeMap[z][x] == "snow":
+                        for yDisplacement in range(2):
+                            if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
+                                schem.setBlock((x, y - yDisplacement, z), "grass_block[snowy=true]")
+                        for yDisplacement in range(2, 4):
+                            if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
+                                schem.setBlock((x, y - yDisplacement, z), "dirt")
+                        if random.randint(1,2) == 1 and schem.getBlockDataAt((x, y - 3, z)) == "blue_wool":
+                            schem.setBlock((x, y - 3, z), "dirt")
                     ### STONE ###
                     for yDisplacement in range(3, 33):
                         if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
                             schem.setBlock((x, y - yDisplacement, z), "stone")
                     ### GRASS AND SHRUBS ###
-                    if random.randint(1,200) == 1:
-                        schem.setBlock((x, y + 1, z), "poppy")
-                    if random.randint(1,300) == 1:
-                        schem.setBlock((x, y + 1, z), "dandelion")
-                    rand = random.randint(1,100)
-                    if rand <= 17: # the value in the inequality is the % chance that there is grass above a grass block
-                        schem.setBlock((x, y + 1, z), "grass")
-                        if rand <= 2: # the value in the inequality is the % chance that there is tall grass above a grass block
-                            schem.setBlock((x, y + 1, z), "tall_grass[half=lower]")
-                            schem.setBlock((x, y + 2, z), "tall_grass[half=upper]")
-                    if [x, z] in treeCoords:
-                        treeHeight = random.randint(3,4)
-                        for yDisplacement in range(treeHeight):
-                            schem.setBlock((x, y + yDisplacement + 1, z), "oak_log")
-                        for xDisplacement in range(-2, 3):
-                            for zDisplacement in range(-2, 3):
-                                yDisplacement = treeHeight - 2
-                                if schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
-                                    schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
-                                yDisplacement = treeHeight - 1
-                                if ((xDisplacement in [-1, 0, 1] or zDisplacement in [-1, 0, 1]) or random.randint(1,2) == 2) and schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
-                                    schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
-                                yDisplacement = treeHeight
-                                if xDisplacement in [-1, 0, 1] and zDisplacement in [-1, 0, 1] and schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
-                                    schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
-                                yDisplacement = treeHeight + 1
-                                if ((xDisplacement == 0 and zDisplacement in [-1, 0, 1]) or (zDisplacement == 0 and xDisplacement in [-1, 0, 1])) and schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
-                                    schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
-                #while y > -150:
-                    #y -= 1
+                    if biomeMap[z][x] == "plains":
+                        if random.randint(1,200) == 1:
+                            schem.setBlock((x, y + 1, z), "poppy")
+                        if random.randint(1,300) == 1:
+                            schem.setBlock((x, y + 1, z), "dandelion")
+                        rand = random.randint(1,100)
+                        if rand <= 17: # the value in the inequality is the % chance that there is grass above a grass block
+                            schem.setBlock((x, y + 1, z), "grass")
+                            if rand <= 2: # the value in the inequality is the % chance that there is tall grass above a grass block
+                                schem.setBlock((x, y + 1, z), "tall_grass[half=lower]")
+                                schem.setBlock((x, y + 2, z), "tall_grass[half=upper]")
+                    if biomeMap[z][x] == "desert":
+                        if random.randint(1,200) == 1:
+                            schem.setBlock((x, y + 1, z), "dead_bush")
+                        rand = random.randint(1,100)
+                        if rand <= 1 and schem.getBlockDataAt((x + 1, y + 1, z)) == "air" and schem.getBlockDataAt((x - 1, y + 1, z)) == "air" and schem.getBlockDataAt((x, y + 1, z + 1)) == "air" and schem.getBlockDataAt((x, y + 1, z - 1)) == "air":
+                            for yDisplacement in range(1, random.randint(3,5)):
+                                schem.setBlock((x, y + yDisplacement, z), "cactus")
+                    if biomeMap[z][x] == "shrooms":
+                        if random.randint(1,100) == 1:
+                            schem.setBlock((x, y + 1, z), "brown_mushroom")
+                        if random.randint(1,150) == 1:
+                            schem.setBlock((x, y + 1, z), "red_mushroom")
+
+                    ### GROWTH (TREES, SHROOMS) ###
+                    if [z, x] in treeCoords:
+                        if biomeMap[z][x] == "plains":
+                            treeHeight = random.randint(3,4)
+                            for yDisplacement in range(treeHeight):
+                                schem.setBlock((x, y + yDisplacement + 1, z), "oak_log")
+                            for xDisplacement in range(-2, 3):
+                                for zDisplacement in range(-2, 3):
+                                    yDisplacement = treeHeight - 2
+                                    if schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
+                                    yDisplacement = treeHeight - 1
+                                    if ((xDisplacement in [-1, 0, 1] or zDisplacement in [-1, 0, 1]) or random.randint(1,2) == 2) and schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
+                                    yDisplacement = treeHeight
+                                    if xDisplacement in [-1, 0, 1] and zDisplacement in [-1, 0, 1] and schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
+                                    yDisplacement = treeHeight + 1
+                                    if ((xDisplacement == 0 and zDisplacement in [-1, 0, 1]) or (zDisplacement == 0 and xDisplacement in [-1, 0, 1])) and schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
+                    if [z, x] in shroomCoords:
+                        if biomeMap[z][x] == "shrooms":
+                            shroomType = random.randint(0,1)
+                            shroomHeight = random.randint(5, 8)
+                            for yDisplacement in range(shroomHeight):
+                                schem.setBlock((x, y + yDisplacement + 1, z), "mushroom_stem")
+                            if shroomType == 0:
+                                for xDisplacement in range(-3, 4):
+                                    for zDisplacement in range(-3, 4):
+                                        if not (xDisplacement in [-3, 3] and zDisplacement in [-3, 3]):
+                                            schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z +  zDisplacement), "brown_mushroom_block[down=false]")
+                            elif shroomType == 1:
+                                yDisplacement = shroomHeight
+                                for xDisplacement in range(-1, 2):
+                                    for zDisplacement in range(-1, 2):
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z +  zDisplacement), "red_mushroom_block[down=false]")
+                                xDisplacement = 2
+                                for yDisplacement in range(shroomHeight-3, shroomHeight):
+                                    for zDisplacement in range(-1, 2):
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z +  zDisplacement), "red_mushroom_block[west=false,down=false]")
+                                xDisplacement = -2
+                                for yDisplacement in range(shroomHeight-3, shroomHeight):
+                                    for zDisplacement in range(-1, 2):
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z +  zDisplacement), "red_mushroom_block[east=false,down=false]")
+                                zDisplacement = 2
+                                for yDisplacement in range(shroomHeight-3, shroomHeight):
+                                    for xDisplacement in range(-1, 2):
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z +  zDisplacement), "red_mushroom_block[north=false,down=false]")
+                                zDisplacement = -2
+                                for yDisplacement in range(shroomHeight-3, shroomHeight):
+                                    for xDisplacement in range(-1, 2):
+                                        schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z +  zDisplacement), "red_mushroom_block[south=false,down=false]")
+
         print("Running agent-based voxel shader...")
         for andesitePatch in andesitePatchCoords:
             size = random.randint(5, 7)
@@ -316,7 +430,7 @@ def generateIslandShape(length, width):
         for z, row in enumerate(layer):
             for x, pixel in enumerate(row):
                 if pixel == 255:
-                    if depth > (mountains[z][x][0] / 15):
+                    if depth > (mountains[x][z][0] / 15):
                         schem.setBlock((x, -depth, z), blockData="blue_wool")
                     else:
                         schem.setBlock((x, -depth, z), blockData="air")
@@ -348,24 +462,32 @@ def generateIslandShape(length, width):
     voxelShader()
     schem.save(os.path.abspath(os.getcwd()), "pvpisland", mcschematic.Version.JE_1_20_1)
 
+def convertToJson():
+    print("Converting schematic into json file...")
+    schemData = []
+
+    for x in range(0, 180):
+        for z in range(0, 180):
+            for y in range(-40, 50):
+                blockData = schem.getBlockDataAt((x, y, z))
+                if blockData != "minecraft:air" and blockData != "air":
+                    block = {}
+                    if not "minecraft:" in blockData:
+                        block["_data"] = "minecraft:" + str(blockData)
+                    else:
+                        block["_data"] = str(blockData)
+                    if blockData == "minecraft:grass":
+                        blockData = "minecraft:short_grass"
+                    block["_x"] = x
+                    block["_y"] = y
+                    block["_z"] = z
+
+                    schemData.append(block)
+
+    json.dump(schemData, open("output.json", "w"))
+
+
+###### MAIN ######
 generateIslandShape(180, 180)
-print("Converting schematic into json file...")
-schemData = []
+#convertToJson()
 
-for x in range(0, 180):
-    for z in range(0, 180):
-        for y in range(-40, 50):
-            blockData = schem.getBlockDataAt((x, y, z))
-            if blockData != "minecraft:air" and blockData != "air":
-                block = {}
-                if not "minecraft:" in blockData:
-                    block["_data"] = "minecraft:" + str(blockData)
-                else:
-                    block["_data"] = str(blockData)
-                block["_x"] = str(x)
-                block["_y"] = str(y)
-                block["_z"] = str(z)
-
-                schemData.append(block)
-
-output = json.dump(schemData, open("output.json", "w"))
