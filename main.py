@@ -24,7 +24,7 @@ def dist3D(point1, point2):
     return sqrt((point2[2] - point1[2])**2 + (point2[1] - point1[1])**2 + (point2[0] - point1[0])**2)
 
 ###### FUNCTIONS ######
-def generateMountainMap(width, length):
+def generateMountainMap(width, length, biomes=False):
     image = np.zeros((width, length), dtype=np.uint)
     for y, row in enumerate(image):
         for x, pixel in enumerate(row):
@@ -42,17 +42,41 @@ def generateMountainMap(width, length):
         #img = img.transpose(Image.ROTATE_90)
         img.save("mountains" + str(iter + 1) + ".png")
     
-    background = Image.blend(Image.open("mountains0.png"), Image.open("mountains1.png"), 0.9)
-    background.save("mountains1.png")
-    background = Image.blend(Image.open("mountains1.png"), Image.open("mountains2.png"), 0.8)
-    background.save("mountains2.png")
-    background = Image.blend(Image.open("mountains2.png"), Image.open("mountains3.png"), 0.7)
-    background.save("mountains3.png")
-    background = Image.blend(Image.open("mountains3.png"), Image.open("mountains4.png"), 0.5)
-    background.save("mountains4.png")
-    background = Image.blend(Image.open("mountains4.png"), Image.open("mountains5.png"), 0.6)
-    background.save("mountains5.png")
-    pix = np.array(background.getdata()).reshape(background.size[1], background.size[0], 4)
+    opacities = [0.9, 0.8, 0.7, 0.5, 0.6]
+    for iter in range(5):
+        background = Image.blend(Image.open(f"mountains{iter}.png"), Image.open(f"mountains{iter + 1}.png"), opacities[iter])
+        background.save(f"mountains{iter + 1}.png")
+
+    if biomes:
+        for iter in range(5,10):
+            img = Image.open("mountains" + str(iter) + ".png")
+            img = img.filter(ImageFilter.GaussianBlur((iter + 1)**1.5))
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(1.5)
+            #img = img.transpose(Image.ROTATE_90)
+            img.save("mountains" + str(iter + 1) + ".png")
+        opacities = [0.4, 0.4, 0.3, 0.3, 0.2]
+        for iter in range(5,10):
+            background = Image.blend(Image.open(f"mountains{iter}.png"), Image.open(f"mountains{iter + 1}.png"), opacities[iter - 5])
+            background.save(f"mountains{iter + 1}.png")
+    
+    min = 99999
+    max = 0
+    bgArray = np.array(background.getdata()).reshape(background.size[1], background.size[0], 4)
+    bgList = list(bgArray)
+    for y, row in enumerate(bgList):
+        for x, pixel in enumerate(row):
+            if dist((x, y), (background.size[0] / 2, background.size[1] / 2)) < background.size[0] / 2:
+                if pixel[0] > max:
+                    max = pixel[0]
+                if pixel[0] < min:
+                    min = pixel[0]
+    
+    for row in bgList:
+        for pixel in row:
+            pixel = [(pixel[0] - min) * 255 / max, (pixel[0] - min) * 255 / max, (pixel[0] - min) * 255 / max, 255]
+
+    pix = bgArray
     return pix
 
 def generateCrackMap(width, length):
@@ -95,7 +119,7 @@ def generateBiomeMap(width, length):
         ["desert" , [220, 220, 160, 255]],
         ["shrooms" , [125, 105, 135, 255]]
     ]
-    pix = generateMountainMap(width, length)
+    pix = generateMountainMap(width, length, biomes=True)
     gen = Image.new("RGBA", (width, length))
     biomeMap = []
     for y, row in enumerate(pix):
@@ -230,7 +254,7 @@ def generateIslandShape(length, width):
         for z in range(width):
             for x in range(length):
                 y = 150
-                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves" or "brown_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "red_mushroom_block" in schem.getBlockDataAt((x, y, z))):
+                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves" or schem.getBlockDataAt((x, y, z)) == "spruce_leaves" or "brown_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "red_mushroom_block" in schem.getBlockDataAt((x, y, z))):
                     y -= 1
                 if schem.getBlockDataAt((x, y, z)) == "blue_wool":
                     ys.append(y)
@@ -318,6 +342,41 @@ def generateIslandShape(length, width):
                                     yDisplacement = treeHeight + 1
                                     if ((xDisplacement == 0 and zDisplacement in [-1, 0, 1]) or (zDisplacement == 0 and xDisplacement in [-1, 0, 1])) and schem.getBlockDataAt((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement)) != "oak_log":
                                         schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z + zDisplacement), "oak_leaves")
+                        if biomeMap[z][x] == "snow":
+                            #print(f"Spruce tree at ({x}, {y}, {z}).")
+                            widthMap = [
+                                [1, 0, 1, 2, 1, 2, 3, 1],
+                                [1, 0, 1, 2, 1, 2],
+                                [0, 1, 0, 1, 2, 1, 2, 3],
+                                [0, 1, 0, 1, 2, 1, 2, 1, 2]
+                            ]
+                            heightMap = [
+                                9, 6, 9, 7
+                            ]
+                            leafHeightMap = [
+                                10, 8, 10, 10
+                            ]
+                            tree = random.choice(widthMap)
+                            logHeight = heightMap[widthMap.index(tree)]
+                            leafHeight = leafHeightMap[widthMap.index(tree)]
+
+                            yDisplacement = leafHeight
+                            while yDisplacement > leafHeight - len(tree):
+                                layerWidth = tree[leafHeight - yDisplacement]
+                                for xDisplacement in range(-layerWidth, layerWidth + 1):
+                                    for zDisplacement in range(-layerWidth, layerWidth + 1):
+                                        if xDisplacement == 0 and zDisplacement == 0:
+                                            if yDisplacement >= logHeight:
+                                                schem.setBlock((x + xDisplacement, y + yDisplacement, z + zDisplacement), "spruce_leaves")
+                                            else:
+                                                schem.setBlock((x + xDisplacement, y + yDisplacement, z + zDisplacement), "spruce_log[axis=y]")
+                                        else:
+                                            if ceil(dist((xDisplacement, zDisplacement), (0, 0))) <= layerWidth:
+                                                schem.setBlock((x + xDisplacement, y + yDisplacement, z + zDisplacement), "spruce_leaves")
+                                yDisplacement -= 1
+                            while yDisplacement > -1:
+                                schem.setBlock((x, y + yDisplacement, z), "spruce_log[axis=y]")
+                                yDisplacement -= 1
                     if [z, x] in shroomCoords:
                         if biomeMap[z][x] == "shrooms":
                             shroomType = random.randint(0,1)
@@ -489,5 +548,4 @@ def convertToJson():
 
 ###### MAIN ######
 generateIslandShape(180, 180)
-#convertToJson()
-
+convertToJson()
