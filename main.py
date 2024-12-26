@@ -323,7 +323,7 @@ def generateIslandShape(length, width):
             for dY in range(0, 5):
                 for (x, y, z) in borderBlocks:
                     if schem.getBlockDataAt((x, y + dY, z)) != "air" or dY == 0:
-                        schem.setBlock((x, y + dY, z), "lime_wool")
+                        schem.setBlock((x, y + dY, z), ("lime_wool" if type == 0 else "green_wool"))
                 for (x, y, z) in poolBlocks:
                     if schem.getBlockDataAt((x, y + dY, z)) != ("lava" if type == 0 else "water"):
                         schem.setBlock((x, y + dY, z), "air")
@@ -375,9 +375,15 @@ def generateIslandShape(length, width):
         for z in range(width):
             for x in range(length):
                 y = 150
-                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves" or schem.getBlockDataAt((x, y, z)) == "spruce_leaves" or "brown_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "red_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "water" in schem.getBlockDataAt((x, y, z)) or "lava" in schem.getBlockDataAt((x, y, z)) or "lime_wool" in schem.getBlockDataAt((x, y, z))):
+                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves" or schem.getBlockDataAt((x, y, z)) == "spruce_leaves" or "brown_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "red_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "water" in schem.getBlockDataAt((x, y, z)) or "lava" in schem.getBlockDataAt((x, y, z)) or "lime_wool" in schem.getBlockDataAt((x, y, z)) or "green_wool" in schem.getBlockDataAt((x, y, z))):
+                    if "green_wool" in schem.getBlockDataAt((x, y, z)):
+                        sugarcaneSpawnChance = random.randint(0,3)
+                        schem.setBlock((x, y, z), "dirt" if sugarcaneSpawnChance < 2 else "andesite")
+                        if schem.getBlockDataAt((x, y + 1, z)) == "air" and schem.getBlockDataAt((x, y + 2, z)) == "air" and (schem.getBlockDataAt((x + 1, y, z)) == "water" or schem.getBlockDataAt((x - 1, y, z)) == "water" or schem.getBlockDataAt((x, y, z + 1)) == "water" or schem.getBlockDataAt((x, y, z - 1)) == "water"):
+                            schem.setBlock((x, y + 1, z), "sugar_cane" if sugarcaneSpawnChance == 0 else "air")
+                            schem.setBlock((x, y + 2, z), "sugar_cane" if sugarcaneSpawnChance == 0 else "air")
                     if "lime_wool" in schem.getBlockDataAt((x, y, z)):
-                        schem.setBlock((x, y, z), "dirt" if random.randint(0,1) == 1 else "stone")
+                        schem.setBlock((x, y, z), "dirt" if random.randint(0,2) == 2 else "gravel")
                     y -= 1
                 if schem.getBlockDataAt((x, y, z)) == "blue_wool":
                     ys.append(y)
@@ -673,8 +679,8 @@ def generateIslandShape(length, width):
                         #schem.setBlock((x - 1, y, z), "red_wool")
                         #schem.setBlock((x, y, z + 1), "red_wool")
                         #schem.setBlock((x, y, z - 1), "red_wool")"""
-                if "lime_wool" in schem.getBlockDataAt((x, y, z)):
-                        schem.setBlock((x, y, z), "red_wool")
+                #if "lime_wool" in schem.getBlockDataAt((x, y, z)):
+                        #schem.setBlock((x, y + 5, z), "red_wool")
     schem.save(os.path.abspath(os.getcwd()), "pvpisland", mcschematic.Version.JE_1_20_1)
 
 def convertToJson():
