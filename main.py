@@ -79,6 +79,67 @@ def generateMountainMap(width, length, biomes=False):
     pix = bgArray
     return pix
 
+def generatePools(length, width, biomeMap, crackMap):
+    global lavaAgents, waterAgents
+
+    image = np.zeros((width, length), dtype=np.uint)
+
+    lavaAgents = []
+    waterAgents = []
+    for initial in range(200):
+        x, y = random.randint(0, length-1), random.randint(0, width-1)
+        if biomeMap[y][x] == "desert" or biomeMap[y][x] == "plains":
+            tooClose = False
+            for agent in lavaAgents:
+                if dist(agent, [x, y]) < 15:
+                    tooClose = True
+            for agent in waterAgents:
+                if dist(agent, [x, y]) < 15:
+                    tooClose = True
+            if not tooClose:
+                if biomeMap[y][x] == "plains":
+                    if random.randint(0, 1) == 1:
+                        lavaAgents.append([x, y])
+                    else:
+                        waterAgents.append([x, y])
+                else:
+                    lavaAgents.append([x, y])
+
+
+    for y, row in enumerate(image):
+        for x, pixel in enumerate(row):
+            for agent in lavaAgents:
+                if dist(agent, [x, y]) <= 3.5:
+                    if (biomeMap[y][x] != "plains") or crackMap[y][x] != 255:
+                        lavaAgents.remove(agent)
+            for agent in waterAgents:
+                if dist(agent, [x, y]) <= 3.5:
+                    if (biomeMap[y][x] != "desert" and biomeMap[y][x] != "plains") or crackMap[y][x] != 255:
+                        waterAgents.remove(agent)
+    
+    for y, row in enumerate(image):
+        for x, pixel in enumerate(row):
+            for agent in lavaAgents:
+                if dist(agent, [x, y]) <= 6:
+                    image[x][y] = 1
+            for agent in waterAgents:
+                if dist(agent, [x, y]) <= 6:
+                    image[x][y] = 2
+
+    gen = Image.new("RGBA", (width, length))
+    for y, row in enumerate(image):
+        for x, pixel in enumerate(row):
+            if pixel == 1: #lava
+                gen.putpixel([y, x], (255, 50, 10, 255))
+            elif pixel == 2: #water
+                gen.putpixel([y, x], (0, 0, 255, 255))
+            else:
+                gen.putpixel([y, x], (0, 0, 0, 255))
+    
+    gen.save("poolmap.png")
+    return image
+
+
 def generateCrackMap(width, length):
     image = np.zeros((width, length), dtype=np.uint)
 
@@ -142,9 +203,11 @@ def generateBiomeMap(width, length):
     return biomeMap
 
 def generateIslandShape(length, width):
+    global biomeMap
     def voxelShader():
+        global biomeMap, lavaAgents, waterAgents
         # the initial generations use the agent model to create structures that are spatially coherent, before they are applied in the probability model section.
-        print("Initializing agents...")
+        print("Spawning trees...")
         ### TREES ###
         treeCoords = []
         for tree in range(random.randint(100,150)):
@@ -165,6 +228,8 @@ def generateIslandShape(length, width):
                     failed = True
             if failed == False:
                 shroomCoords.append(newCoord)
+        
+        print("Spawning ores...")
         ### ORES ###
         # Andesite
         andesitePatchCoords = []
@@ -218,7 +283,7 @@ def generateIslandShape(length, width):
                 copperPatchCoords.append(newCoord)
         # Iron Ore
         ironPatchCoords = []
-        for ironPatch in range(random.randint(1800, 2000)):
+        for ironPatch in range(random.randint(2400, 2600)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in ironPatchCoords:
@@ -247,14 +312,72 @@ def generateIslandShape(length, width):
             if failed == False:
                 diamondPatchCoords.append(newCoord)
 
-        print("Running probability-based voxel shader...")
+        print("Growing lava and water pools...")
 
-        biomeMap = generateBiomeMap(length, width)
+        def spawnPool(type, coords):
+            '''lets create a function to spawn a lava/water pool at a coordinate:'''
+            poolBlocks = createDisc(coords, 2.5)
+            borderBlocks = [block for block in createDisc(coords, 3.5) if not block in poolBlocks]
+            for (x, y, z) in poolBlocks:
+                schem.setBlock((x, y, z), ("lava" if type == 0 else "water"))
+            for dY in range(0, 5):
+                for (x, y, z) in borderBlocks:
+                    if schem.getBlockDataAt((x, y + dY, z)) != "air" or dY == 0:
+                        schem.setBlock((x, y + dY, z), "lime_wool")
+                for (x, y, z) in poolBlocks:
+                    if schem.getBlockDataAt((x, y + dY, z)) != ("lava" if type == 0 else "water"):
+                        schem.setBlock((x, y + dY, z), "air")
+
+        def createDisc(coords, radius):
+            '''first we create a disc from virtual block coordinates'''
+            x, y, z = coords
+            discBlocks = []
+            for dX in range(-ceil(radius), ceil(radius)):
+                for dZ in range(-ceil(radius), ceil(radius)):
+                    if dist3D(coords, (x + dX, y, z + dZ)) < radius:
+                        discBlocks.append((x + dX, y, z + dZ))
+            
+            return discBlocks
+    
+        def discIsInGround(discBlocks):
+            '''we loop through all the blocks in a disc to see if *all* of them are in the ground.'''
+            for (x, y, z) in discBlocks:
+                if schem.getBlockDataAt((x, y, z)) == "air":
+                    return False
+            return True
+
+        def dropPool(XZ):
+            '''a function to generate a disc super high, and if it fails test we lower it by one until it fails or hits the bottom.'''
+            x, z = XZ
+            y = 1
+            while y > -20:
+                y -= 1
+                if discIsInGround(createDisc((x, y, z), 2.5)):
+                    return (x, y, z)
+            return None
+        
+        def dropPools(lavaList, waterList):
+            '''a master function to take the entire list of pools and perform the drop test on all of them'''
+            for lavaPool in lavaList:
+                output = dropPool(lavaPool)
+                if output:
+                    spawnPool(0, output)
+            for waterPool in waterList:
+                output = dropPool(waterPool)
+                if output:
+                    spawnPool(1, output)
+
+        dropPools(lavaAgents, waterAgents)
+
+        print("Growing grass, shrubs, and trees...")
+
         ys = []
         for z in range(width):
             for x in range(length):
                 y = 150
-                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves" or schem.getBlockDataAt((x, y, z)) == "spruce_leaves" or "brown_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "red_mushroom_block" in schem.getBlockDataAt((x, y, z))):
+                while y > -150 and (schem.getBlockDataAt((x, y, z)) == "minecraft:air" or schem.getBlockDataAt((x, y, z)) == "air" or schem.getBlockDataAt((x, y, z)) == "oak_leaves" or schem.getBlockDataAt((x, y, z)) == "spruce_leaves" or "brown_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "red_mushroom_block" in schem.getBlockDataAt((x, y, z)) or "water" in schem.getBlockDataAt((x, y, z)) or "lava" in schem.getBlockDataAt((x, y, z)) or "lime_wool" in schem.getBlockDataAt((x, y, z))):
+                    if "lime_wool" in schem.getBlockDataAt((x, y, z)):
+                        schem.setBlock((x, y, z), "dirt" if random.randint(0,1) == 1 else "stone")
                     y -= 1
                 if schem.getBlockDataAt((x, y, z)) == "blue_wool":
                     ys.append(y)
@@ -298,7 +421,7 @@ def generateIslandShape(length, width):
                         if schem.getBlockDataAt((x, y - yDisplacement, z)) == "blue_wool":
                             schem.setBlock((x, y - yDisplacement, z), "stone")
                     ### GRASS AND SHRUBS ###
-                    if biomeMap[z][x] == "plains":
+                    if biomeMap[z][x] == "plains" and poolMap[x][z] == 0:
                         if random.randint(1,200) == 1:
                             schem.setBlock((x, y + 1, z), "poppy")
                         if random.randint(1,300) == 1:
@@ -309,7 +432,7 @@ def generateIslandShape(length, width):
                             if rand <= 2: # the value in the inequality is the % chance that there is tall grass above a grass block
                                 schem.setBlock((x, y + 1, z), "tall_grass[half=lower]")
                                 schem.setBlock((x, y + 2, z), "tall_grass[half=upper]")
-                    if biomeMap[z][x] == "desert":
+                    if biomeMap[z][x] == "desert" and poolMap[x][z] == 0:
                         if random.randint(1,200) == 1:
                             schem.setBlock((x, y + 1, z), "dead_bush")
                         rand = random.randint(1,100)
@@ -324,7 +447,7 @@ def generateIslandShape(length, width):
 
                     ### GROWTH (TREES, SHROOMS) ###
                     if [z, x] in treeCoords:
-                        if biomeMap[z][x] == "plains":
+                        if biomeMap[z][x] == "plains" and poolMap[x][z] == 0:
                             treeHeight = random.randint(3,4)
                             for yDisplacement in range(treeHeight):
                                 schem.setBlock((x, y + yDisplacement + 1, z), "oak_log")
@@ -410,7 +533,7 @@ def generateIslandShape(length, width):
                                     for xDisplacement in range(-1, 2):
                                         schem.setBlock((x + xDisplacement, y + yDisplacement + 1, z +  zDisplacement), "red_mushroom_block[south=false,down=false]")
 
-        print("Running agent-based voxel shader...")
+        print("Growing ore patches...")
         for andesitePatch in andesitePatchCoords:
             size = random.randint(5, 7)
             for x in range(andesitePatch[0] - size, andesitePatch[0] + size):
@@ -467,13 +590,20 @@ def generateIslandShape(length, width):
                     for z in range(diamondPatch[2] - size, diamondPatch[2] + size):
                         if dist3D([x, y, z], diamondPatch) < random.randint(1, size) and (schem.getBlockDataAt((x, y, z)) == "stone" or schem.getBlockDataAt((x, y, z)) == "andesite" or schem.getBlockDataAt((x, y, z)) == "diorite" or schem.getBlockDataAt((x, y, z)) == "granite"):
                             schem.setBlock((x, y, z), "diamond_ore")
-        #print(ys)
+        
     print("Generating mountainous terrain...")
     mountains = generateMountainMap(length, width)
-    print("Dividing terrain into islands...")
+    print("Breaking up terrain into islands...")
     map = generateCrackMap(length, width)
-    print("Converting data into schematic...")
+    
     layer = copy.deepcopy(map)
+    print("Generating biomes...")
+    biomeMap = generateBiomeMap(length, width)
+
+    print("Spawning lava and water pools...")
+    poolMap = generatePools(length, width, biomeMap, map)
+
+    print("Creating floating islands...")
     for depth in range(15):
         nextLayer = copy.deepcopy(layer)
         for y in range(length):
@@ -519,6 +649,32 @@ def generateIslandShape(length, width):
                     schem.setBlock((x, -depth, z), blockData="air")
     
     voxelShader()
+    
+    print("Performing final block corrections...")
+    for x in range(length):
+        for z in range(width):
+            for y in range(-30, 10):
+                """
+                if "water" == schem.getBlockDataAt((x, y, z)):
+                    #if ("air" in schem.getBlockDataAt((x + 1, y, z))) or ("air" in schem.getBlockDataAt((x - 1, y, z))) or ("air" in schem.getBlockDataAt((x, y, z + 1))) or ("air" in schem.getBlockDataAt((x, y, z - 1))):
+                    schem.setBlock((x, y + 5, z), blockData='''command_block{"Command":"E: ''' + schem.getBlockDataAt((x + 1, y, z)).replace("minecraft:", "")[:10] + '''  W: ''' + schem.getBlockDataAt((x - 1, y, z)).replace("minecraft:", "")[:10] + '''  S: ''' + schem.getBlockDataAt((x, y, z + 1)).replace("minecraft:", "")[:10] + '''  N: ''' + schem.getBlockDataAt((x, y, z - 1)).replace("minecraft:", "")[:10] + '''"}''')
+                    #schem.setBlock((x, y + 4, z), "red_wool")
+                    #print('''command_block{"command":"''' + schem.getBlockDataAt((x + 1, y, z)).replace("minecraft:", "")[:10] + '''"}','{"text":"W: ''' + schem.getBlockDataAt((x - 1, y, z)).replace("minecraft:", "")[:10] + '''"}','{"text":"S: ''' + schem.getBlockDataAt((x, y, z + 1)).replace("minecraft:", "")[:10] + '''"}','{"text":"N: ''' + schem.getBlockDataAt((x, y, z - 1)).replace("minecraft:", "")[:10] + '''"}''')
+                    #if "air" in schem.getBlockDataAt((x, y + 1, z)):   
+                        #schem.setBlock((x, y + 5, z), "red_wool")
+                        #schem.setBlock((x + 1, y, z), "red_wool")
+                        #schem.setBlock((x - 1, y, z), "red_wool")
+                        #schem.setBlock((x, y, z + 1), "red_wool")
+                        #schem.setBlock((x, y, z - 1), "red_wool")
+                if "lava" in schem.getBlockDataAt((x, y, z)):
+                    #if "air" in schem.getBlockDataAt((x + 1, y, z)) or "air" in schem.getBlockDataAt((x - 1, y, z)) or "air" in schem.getBlockDataAt((x, y, z + 1)) or "air" in schem.getBlockDataAt((x, y, z - 1)):
+                        schem.setBlock((x, y + 5, z), "red_wool")
+                        #schem.setBlock((x + 1, y, z), "red_wool")
+                        #schem.setBlock((x - 1, y, z), "red_wool")
+                        #schem.setBlock((x, y, z + 1), "red_wool")
+                        #schem.setBlock((x, y, z - 1), "red_wool")"""
+                if "lime_wool" in schem.getBlockDataAt((x, y, z)):
+                        schem.setBlock((x, y, z), "red_wool")
     schem.save(os.path.abspath(os.getcwd()), "pvpisland", mcschematic.Version.JE_1_20_1)
 
 def convertToJson():
@@ -548,4 +704,4 @@ def convertToJson():
 
 ###### MAIN ######
 generateIslandShape(180, 180)
-convertToJson()
+#convertToJson()
