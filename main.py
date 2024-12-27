@@ -683,7 +683,7 @@ def generateIslandShape(length, width):
                         #schem.setBlock((x, y + 5, z), "red_wool")
     schem.save(os.path.abspath(os.getcwd()), "pvpisland", mcschematic.Version.JE_1_20_1)
 
-def convertToJson():
+def convertToJson(version):
     print("Converting schematic into json file...")
     schemData = []
 
@@ -697,8 +697,8 @@ def convertToJson():
                         block["_data"] = "minecraft:" + str(blockData)
                     else:
                         block["_data"] = str(blockData)
-                    if blockData == "minecraft:grass":
-                        blockData = "minecraft:short_grass"
+                    if (block["_data"] == "minecraft:grass") and version == "1.21":
+                        block["_data"] = "minecraft:short_grass"
                     block["_x"] = x
                     block["_y"] = y
                     block["_z"] = z
@@ -710,4 +710,4 @@ def convertToJson():
 
 ###### MAIN ######
 generateIslandShape(180, 180)
-#convertToJson()
+#convertToJson(version="1.21")
