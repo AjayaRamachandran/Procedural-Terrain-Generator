@@ -1,9 +1,8 @@
 <p align="center">
-  <img src="https://i.ibb.co/SRpRBmD/cracks-Icon.png" alt="cracks-Icon" width="140px" height="150px"/>
+  <img src="https://i.ibb.co/QDCmkHB/cracks-Icon-Small.png" alt="cracks-Icon" width="140px" height="150px"/>
   <h1 align="center">Procedural Terrain Generator</h1>
   <h3 align="center">for <b><i>Minecraft: Java Edition v1.20.1</i></b></h3>
 </p>
-
 
 
 
