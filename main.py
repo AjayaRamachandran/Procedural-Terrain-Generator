@@ -33,32 +33,32 @@ def generateMountainMap(width, length, biomes=False):
     for y, row in enumerate(image):
         for x, pixel in enumerate(row):
             gen.putpixel([y,x], (pixel, pixel, pixel))
-    gen.save("mountains0.png")
+    gen.save("images/mountains0.png")
     for iter in range(5):
-        img = Image.open("mountains" + str(iter) + ".png")
+        img = Image.open("images/mountains" + str(iter) + ".png")
         img = img.filter(ImageFilter.GaussianBlur((iter + 1)**1.4))
         enhancer = ImageEnhance.Contrast(img)
         img = enhancer.enhance(1.9)
         #img = img.transpose(Image.ROTATE_90)
-        img.save("mountains" + str(iter + 1) + ".png")
+        img.save("images/mountains" + str(iter + 1) + ".png")
     
     opacities = [0.9, 0.8, 0.7, 0.5, 0.6]
     for iter in range(5):
-        background = Image.blend(Image.open(f"mountains{iter}.png"), Image.open(f"mountains{iter + 1}.png"), opacities[iter])
-        background.save(f"mountains{iter + 1}.png")
+        background = Image.blend(Image.open(f"images/mountains{iter}.png"), Image.open(f"images/mountains{iter + 1}.png"), opacities[iter])
+        background.save(f"images/mountains{iter + 1}.png")
 
     if biomes:
         for iter in range(5,10):
-            img = Image.open("mountains" + str(iter) + ".png")
+            img = Image.open("images/mountains" + str(iter) + ".png")
             img = img.filter(ImageFilter.GaussianBlur((iter + 1)**1.5))
             enhancer = ImageEnhance.Contrast(img)
             img = enhancer.enhance(1.5)
             #img = img.transpose(Image.ROTATE_90)
-            img.save("mountains" + str(iter + 1) + ".png")
+            img.save("images/mountains" + str(iter + 1) + ".png")
         opacities = [0.4, 0.4, 0.3, 0.3, 0.2]
         for iter in range(5,10):
-            background = Image.blend(Image.open(f"mountains{iter}.png"), Image.open(f"mountains{iter + 1}.png"), opacities[iter - 5])
-            background.save(f"mountains{iter + 1}.png")
+            background = Image.blend(Image.open(f"images/mountains{iter}.png"), Image.open(f"images/mountains{iter + 1}.png"), opacities[iter - 5])
+            background.save(f"images/mountains{iter + 1}.png")
     
     min = 99999
     max = 0
@@ -136,7 +136,7 @@ def generatePools(length, width, biomeMap, crackMap):
             else:
                 gen.putpixel([y, x], (0, 0, 0, 255))
     
-    gen.save("poolmap.png")
+    gen.save("images/poolmap.png")
     return image
 
 
@@ -170,7 +170,7 @@ def generateCrackMap(width, length):
     for y, row in enumerate(image):
         for x, pixel in enumerate(row):
             gen.putpixel([y,x], (pixel, pixel, pixel))
-    gen.save("map.png")
+    gen.save("images/map.png")
     return image
 
 def generateBiomeMap(width, length):
@@ -199,7 +199,7 @@ def generateBiomeMap(width, length):
                 gen.putpixel([x, y], tuple(colors[0][1]))
                 rowBiomes.append(colors[0][0])
         biomeMap.append(rowBiomes)
-    gen.save("biomes.png")
+    gen.save("images/biomes.png")
     return biomeMap
 
 def generateIslandShape(length, width):
