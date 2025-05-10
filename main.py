@@ -204,13 +204,23 @@ def generateBiomeMap(width, length):
 
 def generateIslandShape(length, width):
     global biomeMap
+    spawnfile = json.load(open("spawnfile.json"))
+    ores = spawnfile['ORES']
+    stoneVariants = spawnfile['STONE VARIANTS']
+    shrubs = spawnfile['SHRUBS']
+
+    def getBounds(item, string):
+        L, U = item[string]['probability'] - item[string]['variance'], item[string]['probability'] + item[string]['variance']
+        return L, U
+
     def voxelShader():
         global biomeMap, lavaAgents, waterAgents
         # the initial generations use the agent model to create structures that are spatially coherent, before they are applied in the probability model section.
         print("Spawning trees...")
         ### TREES ###
         treeCoords = []
-        for tree in range(random.randint(100,150)):
+        treeL, treeU = getBounds(shrubs, 'tree')
+        for tree in range(random.randint(treeL,treeU)):
             newCoord = [random.randint(1, length), random.randint(1, width)]
             failed = False
             for coord in treeCoords:
@@ -220,7 +230,8 @@ def generateIslandShape(length, width):
                 treeCoords.append(newCoord)
         ### SHROOMS ###
         shroomCoords = []
-        for shroom in range(random.randint(150, 200)):
+        shroomL, shroomU = getBounds(shrubs, 'shroom')
+        for shroom in range(random.randint(shroomL, shroomU)):
             newCoord = [random.randint(1, length), random.randint(1, width)]
             failed = False
             for coord in shroomCoords:
@@ -233,7 +244,8 @@ def generateIslandShape(length, width):
         ### ORES ###
         # Andesite
         andesitePatchCoords = []
-        for andesitePatch in range(random.randint(600, 800)):
+        andesiteL, andesiteU = getBounds(stoneVariants, 'andesite')
+        for andesitePatch in range(random.randint(andesiteL, andesiteU)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in andesitePatchCoords:
@@ -243,7 +255,8 @@ def generateIslandShape(length, width):
                 andesitePatchCoords.append(newCoord)
         # Diorite
         dioritePatchCoords = []
-        for dioritePatch in range(random.randint(100, 130)):
+        dioriteL, dioriteU = getBounds(stoneVariants, 'diorite')
+        for dioritePatch in range(random.randint(dioriteL, dioriteU)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in dioritePatchCoords:
@@ -253,7 +266,8 @@ def generateIslandShape(length, width):
                 dioritePatchCoords.append(newCoord)
         # Granite
         granitePatchCoords = []
-        for granitePatch in range(random.randint(70, 100)):
+        graniteL, graniteU = getBounds(stoneVariants, 'granite')
+        for granitePatch in range(random.randint(graniteL, graniteU)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in granitePatchCoords:
@@ -263,7 +277,8 @@ def generateIslandShape(length, width):
                 granitePatchCoords.append(newCoord)
         # Coal Ore
         coalPatchCoords = []
-        for coalPatch in range(random.randint(3000, 3400)):
+        coalL, coalU = getBounds(ores, 'coal')
+        for coalPatch in range(random.randint(coalL, coalU)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in coalPatchCoords:
@@ -273,7 +288,8 @@ def generateIslandShape(length, width):
                 coalPatchCoords.append(newCoord)
         # Copper Ore
         copperPatchCoords = []
-        for copperPatch in range(random.randint(2200, 2400)):
+        copperL, copperU = getBounds(ores, 'copper')
+        for copperPatch in range(random.randint(copperL, copperU)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in copperPatchCoords:
@@ -283,7 +299,8 @@ def generateIslandShape(length, width):
                 copperPatchCoords.append(newCoord)
         # Iron Ore
         ironPatchCoords = []
-        for ironPatch in range(random.randint(2400, 2600)):
+        ironL, ironU = getBounds(ores, 'iron')
+        for ironPatch in range(random.randint(ironL, ironU)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in ironPatchCoords:
@@ -293,7 +310,8 @@ def generateIslandShape(length, width):
                 ironPatchCoords.append(newCoord)
         # Lapis Ore
         lapisPatchCoords = []
-        for lapisPatch in range(random.randint(600, 750)):
+        lapisL, lapisU = getBounds(ores, 'lapis')
+        for lapisPatch in range(random.randint(lapisL, lapisU)):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in lapisPatchCoords:
@@ -303,7 +321,8 @@ def generateIslandShape(length, width):
                 lapisPatchCoords.append(newCoord)
         # Diamond Ore
         diamondPatchCoords = []
-        for diamondPatch in range(random.randint(250, 300)):
+        diamondL, diamondU = getBounds(ores, 'diamond')
+        for diamondPatch in range(random.randint(diamondL, diamondU)):
             newCoord = [random.randint(1, length), random.randint(-40, -20), random.randint(1, width)]
             failed = False
             for coord in diamondPatchCoords:

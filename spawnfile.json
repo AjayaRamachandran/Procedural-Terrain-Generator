@@ -1,0 +1,48 @@
+{
+  "ORES" : {
+    "coal" : {
+      "probability" : 3200,
+      "variance" : 200
+    },
+    "copper" : {
+      "probability" : 2300,
+      "variance" : 100
+    },
+    "iron" : {
+      "probability" : 2500,
+      "variance" : 100
+    },
+    "lapis" : {
+      "probability" : 675,
+      "variance" : 75
+    },
+    "diamond" : {
+      "probability" : 275,
+      "variance" : 25
+    }
+  },
+  "STONE VARIANTS" : {
+    "andesite" : {
+      "probability" : 700,
+      "variance" : 100
+    },
+    "diorite" : {
+      "probability" : 115,
+      "variance" : 15
+    },
+    "granite" : {
+      "probability" : 85,
+      "variance" : 15
+    }
+  },
+  "SHRUBS" : {
+    "tree" : {
+      "probability" : 125,
+      "variance" : 25
+    },
+    "shroom" : {
+      "probability" : 175,
+      "variance" : 25
+    }
+  }
+}
