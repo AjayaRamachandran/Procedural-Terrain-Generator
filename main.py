@@ -214,6 +214,14 @@ def generateIslandShape(length, width):
     def getBounds(item, string):
         L, U = item[string]['probability'] - item[string]['variance'], item[string]['probability'] + item[string]['variance']
         return L, U
+    
+    class MinDistance:
+        def __init__(self, type, block):
+            self.minD = type[block]['min_distance']
+    
+    Coal, Copper, Iron, Lapis, Diamond = (MinDistance(ores, block) for block in ["coal", "copper", "iron", "lapis", "diamond"])
+    Andesite, Diorite, Granite = (MinDistance(stoneVariants, block) for block in ["andesite", "diorite", "granite"])
+    Tree, Shroom = (MinDistance(shrubs, block) for block in ["tree", "shroom"])
 
     def voxelShader():
         global biomeMap, lavaAgents, waterAgents
@@ -226,7 +234,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(1, width)]
             failed = False
             for coord in treeCoords:
-                if dist(newCoord, coord) < 4:
+                if dist(newCoord, coord) < Tree.minD:
                     failed = True
             if failed == False:
                 treeCoords.append(newCoord)
@@ -237,7 +245,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(1, width)]
             failed = False
             for coord in shroomCoords:
-                if dist(newCoord, coord) < 10:
+                if dist(newCoord, coord) < Shroom.minD:
                     failed = True
             if failed == False:
                 shroomCoords.append(newCoord)
@@ -251,7 +259,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in andesitePatchCoords:
-                if dist3D(newCoord, coord) < 12:
+                if dist3D(newCoord, coord) < Andesite.minD:
                     failed = True
             if failed == False:
                 andesitePatchCoords.append(newCoord)
@@ -262,7 +270,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in dioritePatchCoords:
-                if dist3D(newCoord, coord) < 12:
+                if dist3D(newCoord, coord) < Diorite.minD:
                     failed = True
             if failed == False:
                 dioritePatchCoords.append(newCoord)
@@ -273,7 +281,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in granitePatchCoords:
-                if dist3D(newCoord, coord) < 12:
+                if dist3D(newCoord, coord) < Granite.minD:
                     failed = True
             if failed == False:
                 granitePatchCoords.append(newCoord)
@@ -284,7 +292,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in coalPatchCoords:
-                if dist3D(newCoord, coord) < 12:
+                if dist3D(newCoord, coord) < Coal.minD:
                     failed = True
             if failed == False:
                 coalPatchCoords.append(newCoord)
@@ -295,7 +303,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in copperPatchCoords:
-                if dist3D(newCoord, coord) < 12:
+                if dist3D(newCoord, coord) < Copper.minD:
                     failed = True
             if failed == False:
                 copperPatchCoords.append(newCoord)
@@ -306,7 +314,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in ironPatchCoords:
-                if dist3D(newCoord, coord) < 12:
+                if dist3D(newCoord, coord) < Iron.minD:
                     failed = True
             if failed == False:
                 ironPatchCoords.append(newCoord)
@@ -317,7 +325,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, 0), random.randint(1, width)]
             failed = False
             for coord in lapisPatchCoords:
-                if dist3D(newCoord, coord) < 12:
+                if dist3D(newCoord, coord) < Lapis.minD:
                     failed = True
             if failed == False:
                 lapisPatchCoords.append(newCoord)
@@ -328,7 +336,7 @@ def generateIslandShape(length, width):
             newCoord = [random.randint(1, length), random.randint(-40, -20), random.randint(1, width)]
             failed = False
             for coord in diamondPatchCoords:
-                if dist3D(newCoord, coord) < 20:
+                if dist3D(newCoord, coord) < Diamond.minD:
                     failed = True
             if failed == False:
                 diamondPatchCoords.append(newCoord)
@@ -597,7 +605,7 @@ def generateIslandShape(length, width):
                         if dist3D([x, y, z], copperPatch) < random.randint(1, size) and (schem.getBlockDataAt((x, y, z)) == "stone" or schem.getBlockDataAt((x, y, z)) == "andesite" or schem.getBlockDataAt((x, y, z)) == "diorite" or schem.getBlockDataAt((x, y, z)) == "granite"):
                             schem.setBlock((x, y, z), "copper_ore")
         for ironPatch in ironPatchCoords:
-            size = 2
+            size = random.randint(2, 3)
             for x in range(ironPatch[0] - size, ironPatch[0] + size):
                 for y in range(ironPatch[1] - size, ironPatch[1] + size):
                     for z in range(ironPatch[2] - size, ironPatch[2] + size):
