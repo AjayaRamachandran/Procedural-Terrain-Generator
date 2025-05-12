@@ -206,7 +206,7 @@ def generateBiomeMap(width, length):
 
 def generateIslandShape(length, width):
     global biomeMap
-    spawnfile = json.load(open(f"{scriptRoot}"spawnfile.json""))
+    spawnfile = json.load(open(f"{scriptRoot}spawnfile.json"))
     ores = spawnfile['ORES']
     stoneVariants = spawnfile['STONE VARIANTS']
     shrubs = spawnfile['SHRUBS']
