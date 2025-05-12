@@ -12,6 +12,8 @@ import json
 
 ###### INITIALIZE ######
 schem = mcschematic.MCSchematic()
+scriptRoot = os.path.dirname(os.path.abspath(__file__))
+print(f"You are running this program in the directory: {scriptRoot}")
 
 ###### OPERATOR FUNCTIONS ######
 def clamp(value, range):
@@ -204,7 +206,7 @@ def generateBiomeMap(width, length):
 
 def generateIslandShape(length, width):
     global biomeMap
-    spawnfile = json.load(open("spawnfile.json"))
+    spawnfile = json.load(open(f"{scriptRoot}"spawnfile.json""))
     ores = spawnfile['ORES']
     stoneVariants = spawnfile['STONE VARIANTS']
     shrubs = spawnfile['SHRUBS']
