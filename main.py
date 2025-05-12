@@ -138,7 +138,7 @@ def generatePools(length, width, biomeMap, crackMap):
             else:
                 gen.putpixel([y, x], (0, 0, 0, 255))
     
-    gen.save("images/poolmap.png")
+    gen.save(f"{scriptRoot}\\images/poolmap.png")
     return image
 
 
